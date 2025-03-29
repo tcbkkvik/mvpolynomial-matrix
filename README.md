@@ -1,5 +1,5 @@
 
-# Basic Algebraic operations on Symbolic Expressions and Matrices
+# Basic Algebra on Symbolic Expressions and Matrices
 
 
 ## Features
