@@ -1,5 +1,5 @@
 
-# Basic Algebra on Symbolic Expressions and Matrices
+# Multivariate Polynomial Matrix - Basic Algebra on Symbolic Expressions and Matrices
 
 
 ## Features
