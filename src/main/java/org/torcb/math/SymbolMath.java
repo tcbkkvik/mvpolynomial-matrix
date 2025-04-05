@@ -439,7 +439,7 @@ public interface SymbolMath {
         }
 
         private void logOp(String op_args) {
-            opArgs = op_args;
+            opArgs = "Op: " + op_args;
             if (logConsumer != null) {
                 while (logRingBuf.size() > 2) {
                     logConsumer.accept(logRingBuf.removeFirst().str());
