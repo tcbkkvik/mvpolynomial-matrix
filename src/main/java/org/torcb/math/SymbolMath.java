@@ -8,6 +8,7 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 public interface SymbolMath {
     DecimalFormat DF = new DecimalFormat("#.###", decSep());
@@ -218,7 +219,7 @@ public interface SymbolMath {
         }
 
         public MVPolynomial multiplyIm(double scalar) {
-            return multiplyIm(null, scalar);
+            return multiplyIm(new Term(), scalar);
         }
 
         public MVPolynomial multiplyIm(Term term, double scalar) {
@@ -232,23 +233,34 @@ public interface SymbolMath {
         }
 
         public MVPolynomial multiplyIm(String expr) {
-            return multiplyIm(MVPolynomial.parse(expr));
+            return multiplyIm(MVPolynomial.parse(expr), 1);
         }
 
         /**
          * Multiply, immutable
          */
         public MVPolynomial multiplyIm(MVPolynomial other) {
+            return multiplyIm(other, 1);
+        }
+
+        public MVPolynomial multiplyIm(MVPolynomial other, double factor) {
             var res = new MVPolynomial(); //empty <=> 0
-            if (other == null) return res; //null <=> 0
+            if (other == null || zero(factor)) return res; //null <=> 0
             for (var e1 : map.entrySet()) {
                 for (var e2 : other.map.entrySet()) {
-                    res.add(e1.getKey().multiplyIm(e2.getKey()), e1.getValue() * e2.getValue()
+                    res.add(
+                            e1.getKey().multiplyIm(e2.getKey()),
+                            e1.getValue() * e2.getValue() * factor
                     );
                 }
             }
             res.removeEmpty();
             return res;
+        }
+
+        public static MVPolynomial multiplyIm(MVPolynomial self, MVPolynomial other, double factor) {
+            if (self == null || other == null) return new MVPolynomial();
+            return self.multiplyIm(other, factor);
         }
 
         private record STerm(double scalar, Term term) {
@@ -294,6 +306,18 @@ public interface SymbolMath {
 
         public MVPolynomial substituteTermsIm(String fromTerm, String toExpression) {
             return substituteTermsIm(new Term(fromTerm), MVPolynomial.parse(toExpression));
+        }
+
+        public MVPolynomial substituteTermsIm(SubstituteTerms subst) {
+            MVPolynomial poly = this;
+            for (var st : subst.list) {
+                poly = poly.substituteTermIm(st);
+            }
+            return poly;
+        }
+
+        public MVPolynomial substituteTermIm(SubstituteTerm subst) {
+            return substituteTermsIm(subst.fromTerm, subst.toExpression);
         }
 
         public MVPolynomial substituteTermsIm(Term sub, MVPolynomial repl) {
@@ -409,6 +433,17 @@ public interface SymbolMath {
         public SubstituteTerms add(String fromTerm, String toExpression) {
             list.add(SubstituteTerm.parse(fromTerm, toExpression));
             return this;
+        }
+
+        public SubstituteTerms add(SubstituteTerm st) {
+            list.add(st);
+            return this;
+        }
+
+        @Override
+        public String toString() {
+            return list.stream().map(SubstituteTerm::toString)
+                       .collect(Collectors.joining("; "));
         }
     }
 
@@ -610,10 +645,14 @@ public interface SymbolMath {
         }
 
         public Matrix substituteTermsIm(SubstituteTerm st) {
+            return substituteTermsCoreIm(new SubstituteTerms().add(st));
+        }
+
+        public Matrix substituteTermsCoreIm(SubstituteTerms st) {
             var out = new Matrix(nRows, nCols);
             var replCount = new AtomicInteger();
             iterateNonNull((pos, row, col, cell) -> {
-                var replaced = cell.substituteTermsIm(st.fromTerm, st.toExpression);
+                var replaced = cell.substituteTermsIm(st);
                 if (replaced.approxSize() <= cell.approxSize()) {
                     out.cells[pos] = replaced;
                     replCount.incrementAndGet();
@@ -657,6 +696,37 @@ public interface SymbolMath {
 
         public <T> T op(Function<Matrix, T> op) {
             return op.apply(this);
+        }
+
+        public Matrix subMatrixSkipRowCol(int _row, int _col) {
+            if (nCols < 1 || nRows < 1) throw new IllegalStateException("0-Matrix");
+            var res = new Matrix(nRows - 1, nCols - 1);
+            iterate((pos, r, c, cell) -> {
+                if (r != _row && c != _col) {
+                    res.setCell(r < _row ? r : r - 1, c < _col ? c : c - 1, cell);
+                }
+            });
+            return res;
+        }
+
+        public MVPolynomial determinant(SubstituteTerms subst) {
+            if (nCols != nRows) throw new IllegalStateException("Not square");
+            var mvp = new MVPolynomial();
+            if (nCols == 0) return mvp.add(0);
+            if (nCols == 1) return mvp.add(cells[0]);
+            if (nCols == 2) return mvp.add(MVPolynomial.multiplyIm(cells[0], cells[3], 1))
+                                      .add(MVPolynomial.multiplyIm(cells[1], cells[2], -1))
+                                      .substituteTermsIm(subst);
+            double sign = -1;
+            for (int col = 0; col < nCols; col++) {
+                sign = -sign;
+                var cell = cells[col]; //row = 0
+                if (cell != null && !cell.isZero()) {
+                    mvp = mvp.add(subMatrixSkipRowCol(0, col).determinant(subst).multiplyIm(cell, sign))
+                             .substituteTermsIm(subst);
+                }
+            }
+            return mvp;
         }
 
         @Override
@@ -731,6 +801,15 @@ public interface SymbolMath {
             if (col < 0 || col >= nCols)
                 throw new IllegalArgumentException("Col outside [0.." + nCols + ")");
             return cells[row * nCols + col];
+        }
+
+        public void setCell(int row, int col, MVPolynomial poly) {
+            cells[index(row, col)] = poly;
+        }
+
+        public int index(int row, int col) {
+            if (row >= nRows || col >= nCols) throw new IllegalArgumentException("out of bounds");
+            return row * nCols + col;
         }
 
         @FunctionalInterface

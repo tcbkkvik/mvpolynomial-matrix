@@ -64,9 +64,9 @@ tr(rotMat) * rotMat
         var LL = L.multiplyIm(L).label("L*L").substituteTermsIm(replace_ii);
         var LL_1_cos = LL.multiplyIm("1 - cos").label("LL*(1-cos)");// 1 - cos;
         Matrix rotateM = Matrix.identity(3).addIm(L_sin).addIm(LL_1_cos)
-                               .label("R = I + L*sin - L*L*(1-cos)  //Rodrigues formula");
+                               .label("Rotate3D = I + L*sin - L*L*(1-cos)  //Rodrigues formula");
         // - R*tr(T)==I:
-        var idRot = rotateM.multiplyIm(rotateM.transposeIm()).label("I = R*tr(R)");
+        var idRot = rotateM.multiplyIm(rotateM.transposeIm()).label("I = Rotate3D * transpose(Rotate3D)");
         var idRot2 = idRot.substituteTermsIm(replace_ii);
         var idRot3 = idRot2.substituteTermsIm(replace_cos2);
         Matrix.printMatrixRingBufAndClear();

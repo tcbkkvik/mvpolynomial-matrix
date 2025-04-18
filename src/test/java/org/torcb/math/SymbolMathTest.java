@@ -78,22 +78,35 @@ public class SymbolMathTest {
 
     @Test
     void testMatrix() {
-        var replace_ii = new SubstituteTerms()
-                .add("i i", "1 - j j - k k")
-                .add("j j", "1 - i i - k k");
+        var repl_i = SubstituteTerm.parse("i i", "1 - j j - k k");
+        var repl_j = SubstituteTerm.parse("j j", "1 - i i - k k");
+        var repl_cos = SubstituteTerm.parse("cos cos", "1 - sin sin");
         var L = Matrix.init3x3(
                 "0", "-k", "j",
                 "k", "0", "-i",
                 "-j", "i", "0").label("L (CrossProd matrix)");
         var L_sin = L.multiplyIm("sin").label("L*sin");
-        var LL = L.multiplyIm(L).label("L*L").substituteTermsIm(replace_ii);
+        var LL = L.multiplyIm(L).label("L*L")
+                  .substituteTermsIm(repl_j)
+                  .substituteTermsIm(repl_i)
+                ;
         var LL_1_cos = LL.multiplyIm("1 - cos").label("LL*(1-cos)");// 1 - cos;
-        Matrix rotateM = Matrix.identity(3).addIm(L_sin).addIm(LL_1_cos)
-                               .label("R = I + L*sin - L*L*(1-cos)  //Rodrigues formula");
+        Matrix identity3D = Matrix.identity(3);
+        Matrix rotateM = identity3D.addIm(L_sin).addIm(LL_1_cos)
+                                 .label("R = I + L*sin - L*L*(1-cos)  //Rodrigues formula");
         var idRot = rotateM.multiplyIm(rotateM.transposeIm()).label("I = R*tr(R)");
-        var idRot2 = idRot.substituteTermsIm(replace_ii);
-        var idRot3 = idRot2.substituteTermsIm("cos cos", "1 - sin sin");
-        assertEquals(Matrix.identity(3), idRot3);
+        var idRot2 = idRot
+                .substituteTermsIm(repl_i)
+                .substituteTermsIm(repl_j)
+                ;
+        var idRot3 = idRot2.substituteTermsIm(repl_cos);
+        MVPolynomial det = rotateM.determinant(new SubstituteTerms()
+                .add(repl_j)
+                .add(repl_i)
+                .add(repl_cos)
+        );
+        assertEquals(identity3D, idRot3);
+        assertEquals(new MVPolynomial().add(1), det);
     }
 
 }
