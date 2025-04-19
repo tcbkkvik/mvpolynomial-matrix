@@ -145,7 +145,7 @@ public interface SymbolMathDemoMain {
         var replace_ii = new SubstituteTerms()
                 .add("i i", "1 - j j - k k")
                 .add("j j", "1 - i i - k k");
-        var replace_cos2 = new SubstituteTerms()
+        var replace_cos2 = new SubstituteTerms().acceptAll(true)
                 .add("cos cos", "1 - sin sin");
         var L = Matrix.init3x3(
                 "0", "-k", "j",

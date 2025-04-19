@@ -86,27 +86,24 @@ public class SymbolMathTest {
                 "k", "0", "-i",
                 "-j", "i", "0").label("L (CrossProd matrix)");
         var L_sin = L.multiplyIm("sin").label("L*sin");
-        var LL = L.multiplyIm(L).label("L*L")
-                  .substituteTermsIm(repl_j)
-                  .substituteTermsIm(repl_i)
-                ;
+        var LL = L.multiplyIm(L).label("L*L").substituteTermsIm(repl_j, repl_i);
         var LL_1_cos = LL.multiplyIm("1 - cos").label("LL*(1-cos)");// 1 - cos;
         Matrix identity3D = Matrix.identity(3);
         Matrix rotateM = identity3D.addIm(L_sin).addIm(LL_1_cos)
-                                 .label("R = I + L*sin - L*L*(1-cos)  //Rodrigues formula");
+                                   .label("R = I + L*sin - L*L*(1-cos)  //Rodrigues formula");
         var idRot = rotateM.multiplyIm(rotateM.transposeIm()).label("I = R*tr(R)");
-        var idRot2 = idRot
-                .substituteTermsIm(repl_i)
-                .substituteTermsIm(repl_j)
-                ;
+        var idRot2 = idRot.substituteTermsIm(repl_i, repl_j);
         var idRot3 = idRot2.substituteTermsIm(repl_cos);
-        MVPolynomial det = rotateM.determinant(new SubstituteTerms()
-                .add(repl_j)
-                .add(repl_i)
-                .add(repl_cos)
-        );
+
+        MVPolynomial det = rotateM.determinant(repl_j, repl_cos);
+        MVPolynomial det2 = rotateM
+                .determinant()
+                .substituteTermsIm(repl_j, repl_j, repl_cos);
+
         assertEquals(identity3D, idRot3);
-        assertEquals(new MVPolynomial().add(1), det);
+        var one = new MVPolynomial().add(1);
+        assertEquals(one, det);
+        assertEquals(one, det2);
     }
 
 }

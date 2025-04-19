@@ -309,15 +309,22 @@ public interface SymbolMath {
         }
 
         public MVPolynomial substituteTermsIm(SubstituteTerms subst) {
-            MVPolynomial poly = this;
-            for (var st : subst.list) {
-                poly = poly.substituteTermIm(st);
-            }
-            return poly;
+            return substituteTermsIm(subst.all, subst.list.toArray(new SubstituteTerm[0]));
         }
 
-        public MVPolynomial substituteTermIm(SubstituteTerm subst) {
-            return substituteTermsIm(subst.fromTerm, subst.toExpression);
+        public MVPolynomial substituteTermsIm(SubstituteTerm... subst) {
+            return substituteTermsIm(false, subst);
+        }
+
+        public MVPolynomial substituteTermsIm(boolean all, SubstituteTerm... subst) {
+            var r = this;
+            for (var s : subst) {
+                MVPolynomial r1 = r.substituteTermsIm(s.fromTerm, s.toExpression);
+                if (all || r1.approxSize() < r.approxSize()) {
+                    r = r1;
+                }
+            }
+            return r;
         }
 
         public MVPolynomial substituteTermsIm(Term sub, MVPolynomial repl) {
@@ -429,14 +436,20 @@ public interface SymbolMath {
 
     class SubstituteTerms {
         public final List<SubstituteTerm> list = new ArrayList<>();
+        public boolean all;
+
+        public SubstituteTerms acceptAll(boolean all) {
+            this.all = all;
+            return this;
+        }
 
         public SubstituteTerms add(String fromTerm, String toExpression) {
             list.add(SubstituteTerm.parse(fromTerm, toExpression));
             return this;
         }
 
-        public SubstituteTerms add(SubstituteTerm st) {
-            list.add(st);
+        public SubstituteTerms add(SubstituteTerm... st) {
+            Collections.addAll(list, st);
             return this;
         }
 
@@ -644,7 +657,7 @@ public interface SymbolMath {
             return substituteTermsIm(SubstituteTerm.parse(fromTerm, toExpression));
         }
 
-        public Matrix substituteTermsIm(SubstituteTerm st) {
+        public Matrix substituteTermsIm(SubstituteTerm... st) {
             return substituteTermsCoreIm(new SubstituteTerms().add(st));
         }
 
@@ -653,12 +666,8 @@ public interface SymbolMath {
             var replCount = new AtomicInteger();
             iterateNonNull((pos, row, col, cell) -> {
                 var replaced = cell.substituteTermsIm(st);
-                if (replaced.approxSize() <= cell.approxSize()) {
-                    out.cells[pos] = replaced;
-                    replCount.incrementAndGet();
-                } else {
-                    out.cells[pos] = cell;
-                }
+                if (replaced != cell) replCount.incrementAndGet();
+                out.cells[pos] = replaced;
             });
             if (replCount.get() > 0) {
                 out.label(label);
@@ -717,9 +726,8 @@ public interface SymbolMath {
             if (nCols == 2) return mvp.add(MVPolynomial.multiplyIm(cells[0], cells[3], 1))
                                       .add(MVPolynomial.multiplyIm(cells[1], cells[2], -1))
                                       .substituteTermsIm(subst);
-            double sign = -1;
-            for (int col = 0; col < nCols; col++) {
-                sign = -sign;
+            double sign = 1;
+            for (int col = 0; col < nCols; col++, sign = -sign) {
                 var cell = cells[col]; //row = 0
                 if (cell != null && !cell.isZero()) {
                     mvp = mvp.add(subMatrixSkipRowCol(0, col).determinant(subst).multiplyIm(cell, sign))
@@ -727,6 +735,10 @@ public interface SymbolMath {
                 }
             }
             return mvp;
+        }
+
+        public MVPolynomial determinant(SubstituteTerm... st) {
+            return determinant(new SubstituteTerms().add(st));
         }
 
         @Override
