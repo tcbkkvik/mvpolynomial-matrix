@@ -78,7 +78,6 @@ public class SymbolMathTest {
 
     @Test
     void testMatrix() {
-        var repl_i = SubstituteTerm.parse("i i", "1 - j j - k k");
         var repl_j = SubstituteTerm.parse("j j", "1 - i i - k k");
         var repl_cos = SubstituteTerm.parse("cos cos", "1 - sin sin");
         var L = Matrix.init3x3(
@@ -86,13 +85,13 @@ public class SymbolMathTest {
                 "k", "0", "-i",
                 "-j", "i", "0").label("L (CrossProd matrix)");
         var L_sin = L.multiplyIm("sin").label("L*sin");
-        var LL = L.multiplyIm(L).label("L*L").substituteTermsIm(repl_j, repl_i);
+        var LL = L.multiplyIm(L).label("L*L").substituteTermsIm(repl_j);
         var LL_1_cos = LL.multiplyIm("1 - cos").label("LL*(1-cos)");// 1 - cos;
         Matrix identity3D = Matrix.identity(3);
         Matrix rotateM = identity3D.addIm(L_sin).addIm(LL_1_cos)
                                    .label("R = I + L*sin - L*L*(1-cos)  //Rodrigues formula");
         var idRot = rotateM.multiplyIm(rotateM.transposeIm()).label("I = R*tr(R)");
-        var idRot2 = idRot.substituteTermsIm(repl_i, repl_j);
+        var idRot2 = idRot.substituteTermsIm(repl_j);
         var idRot3 = idRot2.substituteTermsIm(repl_cos);
 
         MVPolynomial det = rotateM.determinant(repl_j, repl_cos);
