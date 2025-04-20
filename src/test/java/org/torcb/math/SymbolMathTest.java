@@ -91,10 +91,13 @@ public class SymbolMathTest {
         var LL_1_cos = LL.multiplyIm("1 - cos").label("LL*(1-cos)");// 1 - cos;
         Matrix identity3D = Matrix.identity(3);
         Matrix rotateM = identity3D.addIm(L_sin).addIm(LL_1_cos)
-                                   .label("Rotate = I + L*sin - L*L*(1-cos)  //Rodrigues formula");
+                                   .label("Rotate = I + L*sin + L*L*(1-cos)  //Euler-Rodrigues formula");
+        String str = rotateM.toString();
+        var mat2 = Matrix.parse(str);
         Matrix idRot = rotateM.multiplyIm(rotateM.transposeIm()).label("I = Rotate * transpose(Rotate)");
         MVPolynomial det = rotateM.determinant();
 
+        assertEquals(rotateM, mat2);
         assertEquals(identity3D, idRot);
         assertEquals(new MVPolynomial().add(1), det);
     }

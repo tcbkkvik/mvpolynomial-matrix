@@ -113,7 +113,7 @@ public interface SymbolMath {
     class MVPolynomial {
         private final Map<Term, Double> map = new TreeMap<>();
         static final Pattern SCALAR_TERM_PATTERN = Pattern.compile("([^a-zA-Z_]*)(.*)");
-        static final Pattern SIGN_PATTERN = Pattern.compile("[+-]");
+        static final Pattern SIGN_PATTERN = Pattern.compile("[+−-]");
         String label;
 
         public static MVPolynomial parse(String expression) {
@@ -126,7 +126,7 @@ public interface SymbolMath {
                 part = part.trim();
                 switch (part) {
                     case "", "+" -> {}
-                    case "-" -> sign *= -1;
+                    case "-", "−" -> sign *= -1;
                     default -> {
                         Matcher matcher = SCALAR_TERM_PATTERN.matcher(part);
                         if (!matcher.matches()) {
@@ -501,6 +501,25 @@ public interface SymbolMath {
             while (logRingBuf.size() > 100) {
                 logRingBuf.removeFirst();
             }
+        }
+
+        public static Matrix parse(String fullMatrix) {
+            int ix = fullMatrix.indexOf("}");
+            if (ix >=0) {
+                fullMatrix = fullMatrix.substring(ix+1).trim();
+            }
+            String[] rows = fullMatrix.split(";");
+            int nCols = 0;
+            for (int i = 0; i < rows.length; i++) {
+                String[] cols = rows[i].split(",", -1);
+                if (i == 0) {
+                    nCols = cols.length;
+                } else if (nCols != cols.length) {
+                    throw new IllegalStateException("different row lengths");
+                }
+            }
+            return new Matrix(rows.length, nCols)
+                    .init(fullMatrix.split("[,;]"));
         }
 
         public Matrix init(MVPolynomial... arr) {

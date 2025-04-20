@@ -62,7 +62,7 @@ tr(rotMat) * rotMat
         var LL = L.multiplyIm(L).label("L*L");
         var LL_1_cos = LL.multiplyIm("1 - cos").label("LL*(1-cos)");// 1 - cos;
         Matrix rotateM = Matrix.identity(3).addIm(L_sin).addIm(LL_1_cos)
-                               .label("Rotate3D = I + L*sin - L*L*(1-cos)  //Rodrigues formula");
+                               .label("Rotate3D = I + L*sin + L*L*(1-cos)  //Euler-Rodrigues formula");
         // - R*tr(T)==I:
         var idRot = rotateM.multiplyIm(rotateM.transposeIm()).label("I = Rotate3D * transpose(Rotate3D)");
         Matrix.printMatrixRingBufAndClear();
@@ -111,13 +111,13 @@ Output:
   −j*sin,  i*sin,  1;
 
  Op: 7.add(1.0 * matrix 5) ->
- Matrix{8 Rotate3D = I + L*sin - L*L*(1-cos)  //Rodrigues formula}
+ Matrix{8 Rotate3D = I + L*sin + L*L*(1-cos)  //Euler-Rodrigues formula}
   cos*k*k + cos*j*j − k*k − j*j + 1,  −cos*i*j − k*sin + i*j,  −cos*i*k + j*sin + i*k;
   −cos*i*j + k*sin + i*j,  −cos*j*j + j*j + cos,  −cos*j*k + j*k − i*sin;
   −cos*i*k − j*sin + i*k,  −cos*j*k + j*k + i*sin,  −cos*k*k + k*k + cos;
 
  Op: 8.transpose() ->
- Matrix{9 tr(Rotate3D = I + L*sin - L*L*(1-cos)  //Rodrigues formula)}
+ Matrix{9 tr(Rotate3D = I + L*sin + L*L*(1-cos)  //Euler-Rodrigues formula)}
   cos*k*k + cos*j*j − k*k − j*j + 1,  −cos*i*j + k*sin + i*j,  −cos*i*k − j*sin + i*k;
   −cos*i*j − k*sin + i*j,  −cos*j*j + j*j + cos,  −cos*j*k + j*k + i*sin;
   −cos*i*k + j*sin + i*k,  −cos*j*k + j*k − i*sin,  −cos*k*k + k*k + cos;
