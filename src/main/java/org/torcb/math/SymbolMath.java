@@ -12,7 +12,8 @@ import java.util.stream.Collectors;
 
 public interface SymbolMath {
     DecimalFormat DF = new DecimalFormat("#.###", decSep());
-    ThreadLocal<SubstituteTerms> SUBSTITUTE_RULES = ThreadLocal.withInitial(SubstituteTerms::new);
+    ThreadLocal<SubstituteTerms> SubstituteRules = ThreadLocal.withInitial(SubstituteTerms::new);
+    Matrix Identity3d = Matrix.identity(3);
 
     static DecimalFormatSymbols decSep() {
         var ds = DecimalFormatSymbols.getInstance();
@@ -505,8 +506,8 @@ public interface SymbolMath {
 
         public static Matrix parse(String fullMatrix) {
             int ix = fullMatrix.indexOf("}");
-            if (ix >=0) {
-                fullMatrix = fullMatrix.substring(ix+1).trim();
+            if (ix >= 0) {
+                fullMatrix = fullMatrix.substring(ix + 1).trim();
             }
             String[] rows = fullMatrix.split(";");
             int nCols = 0;
@@ -658,7 +659,7 @@ public interface SymbolMath {
                 }
             });
             out.logOp(id + ".multiply(matrix " + right.id + ")");
-            return out.substituteTermsIm(SUBSTITUTE_RULES.get());
+            return out.substituteTermsIm(SubstituteRules.get());
         }
 
         public Matrix substituteTermsIm(SubstituteTerms subst) {
@@ -737,7 +738,7 @@ public interface SymbolMath {
 
         public MVPolynomial determinant(SubstituteTerms subst) {
             if (subst.list.isEmpty()) {
-                subst = SUBSTITUTE_RULES.get();
+                subst = SubstituteRules.get();
             }
             if (nCols != nRows) throw new IllegalStateException("Not square");
             var mvp = new MVPolynomial();

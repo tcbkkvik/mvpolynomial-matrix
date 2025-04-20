@@ -143,7 +143,7 @@ public interface SymbolMathDemoMain {
     @SuppressWarnings("unused")
     static Matrix calcRot3x3Matrix() {
         Matrix.logRingBuf.clear();
-        SUBSTITUTE_RULES.set(new SubstituteTerms()
+        SubstituteRules.set(new SubstituteTerms()
                 .add("i i", "1 - j j - k k")
                 .add("cos cos", "1 - sin sin"));
         var L = Matrix.init3x3(
@@ -181,7 +181,7 @@ public interface SymbolMathDemoMain {
         System.out.println("invRot_ijk" + invRot_ijk);
         System.out.println("Restored original rotation_vector[ijk] = " + Arrays.toString(ijk));
         Matrix.logRingBuf.clear();
-        SUBSTITUTE_RULES.remove();
+        SubstituteRules.remove();
         return rotateM;
     }
 

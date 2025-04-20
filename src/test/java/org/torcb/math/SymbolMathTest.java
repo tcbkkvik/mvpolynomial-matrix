@@ -78,7 +78,7 @@ public class SymbolMathTest {
 
     @Test
     void testMatrix() {
-        SUBSTITUTE_RULES.set(new SubstituteTerms()
+        SubstituteRules.set(new SubstituteTerms()
                 .add("j j", "1 - i i - k k")
                 .add("cos cos", "1 - sin sin"));
 
@@ -89,8 +89,7 @@ public class SymbolMathTest {
         var L_sin = L.multiplyIm("sin").label("L*sin");
         var LL = L.multiplyIm(L).label("L*L");
         var LL_1_cos = LL.multiplyIm("1 - cos").label("LL*(1-cos)");// 1 - cos;
-        Matrix identity3D = Matrix.identity(3);
-        Matrix rotateM = identity3D.addIm(L_sin).addIm(LL_1_cos)
+        Matrix rotateM = Identity3d.addIm(L_sin).addIm(LL_1_cos)
                                    .label("Rotate = I + L*sin + L*L*(1-cos)  //Euler-Rodrigues formula");
         String str = rotateM.toString();
         var mat2 = Matrix.parse(str);
@@ -98,7 +97,7 @@ public class SymbolMathTest {
         MVPolynomial det = rotateM.determinant();
 
         assertEquals(rotateM, mat2);
-        assertEquals(identity3D, idRot);
+        assertEquals(Identity3d, idRot);
         assertEquals(new MVPolynomial().add(1), det);
     }
 
