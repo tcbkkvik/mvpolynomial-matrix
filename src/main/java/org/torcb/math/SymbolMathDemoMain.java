@@ -6,6 +6,7 @@ import java.util.function.BiFunction;
 import static org.torcb.math.SymbolMath.*;
 import static org.torcb.math.MatrixUtil.Quaternion;
 
+@SuppressWarnings("CommentedOutCode")
 public interface SymbolMathDemoMain {
     static void tstEulerMatrixPow() {
         System.out.println("------------------------------");

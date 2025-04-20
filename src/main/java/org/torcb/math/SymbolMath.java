@@ -12,6 +12,8 @@ import java.util.stream.Collectors;
 
 public interface SymbolMath {
     DecimalFormat DF = new DecimalFormat("#.###", decSep());
+    ThreadLocal<SubstituteTerms> SUBSTITUTE_RULES = ThreadLocal.withInitial(SubstituteTerms::new);
+
     static DecimalFormatSymbols decSep() {
         var ds = DecimalFormatSymbols.getInstance();
         ds.setDecimalSeparator('.');
@@ -310,10 +312,6 @@ public interface SymbolMath {
 
         public MVPolynomial substituteTermsIm(SubstituteTerms subst) {
             return substituteTermsIm(subst.all, subst.list.toArray(new SubstituteTerm[0]));
-        }
-
-        public MVPolynomial substituteTermsIm(SubstituteTerm... subst) {
-            return substituteTermsIm(false, subst);
         }
 
         public MVPolynomial substituteTermsIm(boolean all, SubstituteTerm... subst) {
@@ -641,7 +639,7 @@ public interface SymbolMath {
                 }
             });
             out.logOp(id + ".multiply(matrix " + right.id + ")");
-            return out;
+            return out.substituteTermsIm(SUBSTITUTE_RULES.get());
         }
 
         public Matrix substituteTermsIm(SubstituteTerms subst) {
@@ -719,6 +717,9 @@ public interface SymbolMath {
         }
 
         public MVPolynomial determinant(SubstituteTerms subst) {
+            if (subst.list.isEmpty()) {
+                subst = SUBSTITUTE_RULES.get();
+            }
             if (nCols != nRows) throw new IllegalStateException("Not square");
             var mvp = new MVPolynomial();
             if (nCols == 0) return mvp.add(0);
