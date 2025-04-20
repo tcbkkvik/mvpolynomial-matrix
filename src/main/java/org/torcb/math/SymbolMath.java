@@ -13,7 +13,7 @@ import java.util.stream.Collectors;
 public interface SymbolMath {
     DecimalFormat DF = new DecimalFormat("#.###", decSep());
     ThreadLocal<SubstituteTerms> SubstituteRules = ThreadLocal.withInitial(SubstituteTerms::new);
-    Matrix Identity3d = Matrix.identity(3);
+    static Matrix Identity3d() {return Matrix.identity(3);}
 
     static DecimalFormatSymbols decSep() {
         var ds = DecimalFormatSymbols.getInstance();
