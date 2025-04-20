@@ -143,33 +143,24 @@ public interface SymbolMathDemoMain {
     @SuppressWarnings("unused")
     static Matrix calcRot3x3Matrix() {
         Matrix.logRingBuf.clear();
-        var replace_ii = new SubstituteTerms()
+        SUBSTITUTE_RULES.set(new SubstituteTerms()
                 .add("i i", "1 - j j - k k")
-                .add("j j", "1 - i i - k k");
-        var replace_cos2 = new SubstituteTerms().acceptAll(true)
-                .add("cos cos", "1 - sin sin");
+                .add("cos cos", "1 - sin sin"));
         var L = Matrix.init3x3(
                 "0", "-k", "j",
                 "k", "0", "-i",
                 "-j", "i", "0").label("L (CrossProduct matrix; Lie algebra)");
         var L_sin = L.multiplyIm("sin").label("L*sin");
-        var LL = L.multiplyIm(L).label("L*L").substituteTermsIm(replace_ii);
+        var LL = L.multiplyIm(L).label("L*L");
         var LL_1_cos = LL.multiplyIm("1 - cos").label("LL*(1-cos)");// 1 - cos;
         Matrix rotateM = Matrix.identity(3).addIm(L_sin).addIm(LL_1_cos)
                                .label("Rotate3D = I + L*sin - L*L*(1-cos)  //Rodrigues formula");
         // - R*tr(T)==I:
         var idRot = rotateM.multiplyIm(rotateM.transposeIm()).label("I = Rotate3D * transpose(Rotate3D)");
-        var idRot2 = idRot.substituteTermsIm(replace_ii);
-        var idRot3 = idRot2.substituteTermsIm(replace_cos2);
         Matrix.printMatrixRingBufAndClear();
 
-//        System.out.println(rotateM);
-//        System.out.println("L" + L);
         var L_LTrans = L.multiplyIm(L.transposeIm());
         System.out.println("L*tr(L)" + L_LTrans);
-//        System.out.println("L*sin" + L_sin);
-//        System.out.println("L*L" + LL);
-//        System.out.println("L*L*(1-cos)" + LL_1_cos);
         Matrix rotateM_deriveSin = rotateM.deriveIm("sin");
         var ll_derive_i = LL.deriveIm("i");
         Matrix rotateM_deriveCos = rotateM.deriveIm("cos");
@@ -180,12 +171,8 @@ public interface SymbolMathDemoMain {
         System.out.println("derive LL(i)" + ll_derive_i);
         System.out.println("neg_rotateM_tr" + minusTrRotateM);
 
-        var rMinus_rTr = rotateM
-                .addIm(minusTrRotateM)
-                .substituteTermsIm(replace_ii)
-                .substituteTermsIm(replace_cos2);
-        var invRot_ijk = rMinus_rTr
-                .substituteTermsIm("sin", "0.5");
+        var rMinus_rTr = rotateM.addIm(minusTrRotateM);
+        var invRot_ijk = rMinus_rTr.substituteTermsIm("sin", "0.5");
 
         MVPolynomial[] cells = invRot_ijk.cells;
         MVPolynomial[] ijk = {cells[7], cells[2], cells[3]};
@@ -194,6 +181,7 @@ public interface SymbolMathDemoMain {
         System.out.println("invRot_ijk" + invRot_ijk);
         System.out.println("Restored original rotation_vector[ijk] = " + Arrays.toString(ijk));
         Matrix.logRingBuf.clear();
+        SUBSTITUTE_RULES.remove();
         return rotateM;
     }
 
