@@ -426,7 +426,7 @@ public interface SymbolMath {
         private String op, val;
 
         public MVPolynomialParser(String expr) {
-            matcher = OP_VAL_PATTERN.matcher(expr);
+            matcher = OP_VAL_PATTERN.matcher(expr == null ? "" : expr);
         }
 
         private boolean step() {
