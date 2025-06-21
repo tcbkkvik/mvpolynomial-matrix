@@ -2,8 +2,7 @@ package org.torcb.math;
 
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.torcb.math.SymbolMath.*;
 
 public class SymbolMathTest {
@@ -105,4 +104,19 @@ public class SymbolMathTest {
         assertEquals(new MVPolynomial().add(1), det);
     }
 
+    @Test
+    void testParseFull() throws NumberFormatException {
+        SubstituteRules.set(new SubstituteTerms()
+                .add("cos cos", "1 - sin sin"));
+
+        var res = MVPolynomial.parse("6a - -4 * -a");
+        assertEquals(MVPolynomial.parse("2a"), res);
+        MVPolynomial poly = MVPolynomial
+                .parse("1 + (a + cos)(a - cos) + (a+1)(a-1) - sin sin")
+                .substituteTermsIm();
+
+        System.out.println(poly);
+        var expect = MVPolynomial.parse("2 a*a  -1");
+        assertEquals(poly, expect);
+    }
 }

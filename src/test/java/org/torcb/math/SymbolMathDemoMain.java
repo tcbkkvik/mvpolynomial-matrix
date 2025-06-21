@@ -145,6 +145,7 @@ public interface SymbolMathDemoMain {
         Matrix.logRingBuf.clear();
         SubstituteRules.set(new SubstituteTerms()
                 .add("i i", "1 - j j - k k")
+                .add("j j", "1 - i i - k k")
                 .add("cos cos", "1 - sin sin"));
         var L = Matrix.init3x3(
                 "0", "-k", "j",

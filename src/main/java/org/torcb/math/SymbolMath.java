@@ -114,32 +114,25 @@ public interface SymbolMath {
     class MVPolynomial {
         private final Map<Term, Double> map = new TreeMap<>();
         static final Pattern SCALAR_TERM_PATTERN = Pattern.compile("([^a-zA-Z_]*)(.*)");
-        static final Pattern SIGN_PATTERN = Pattern.compile("[+−-]");
         String label;
 
         public static MVPolynomial parse(String expression) {
-            var sumOfTerms = new MVPolynomial();
-            if (expression == null || expression.isEmpty()) return sumOfTerms;
-            String[] parts = SIGN_PATTERN
-                    .splitWithDelimiters(expression.replace("*", " "), 100);
-            double sign = 1;
-            for (String part : parts) {
-                part = part.trim();
-                switch (part) {
-                    case "", "+" -> {}
-                    case "-", "−" -> sign *= -1;
-                    default -> {
-                        Matcher matcher = SCALAR_TERM_PATTERN.matcher(part);
-                        if (!matcher.matches()) {
-                            continue;
-                        }
-                        String num = matcher.group(1).trim();
-                        double scalar = !num.isEmpty() ? Double.parseDouble(num) : 1;
-                        sumOfTerms.add(new Term(matcher.group(2).trim()), sign * scalar);
-                        sign = 1;
-                    }
-                }
+            return new MVPolynomialParser(expression).parse();
+        }
+
+        private static void parseNumVal(String part, MVPolynomial sumOfTerms, double sign) {
+            Matcher matcher = SCALAR_TERM_PATTERN.matcher(part);
+            if (!matcher.matches()) {
+                return;
             }
+            String num = matcher.group(1).trim();
+            double scalar = !num.isEmpty() ? Double.parseDouble(num) : 1;
+            sumOfTerms.add(new Term(matcher.group(2).trim()), sign * scalar);
+        }
+
+        public static MVPolynomial parseNumVal(String part, double sign) {
+            MVPolynomial sumOfTerms = new MVPolynomial();
+            parseNumVal(part, sumOfTerms, sign);
             return sumOfTerms;
         }
 
@@ -222,7 +215,7 @@ public interface SymbolMath {
         }
 
         public MVPolynomial multiplyIm(double scalar) {
-            return multiplyIm(new Term(), scalar);
+            return multiplyIm((Term) null, scalar);
         }
 
         public MVPolynomial multiplyIm(Term term, double scalar) {
@@ -250,10 +243,11 @@ public interface SymbolMath {
             var res = new MVPolynomial(); //empty <=> 0
             if (other == null || zero(factor)) return res; //null <=> 0
             for (var e1 : map.entrySet()) {
+                double val = factor * e1.getValue();
                 for (var e2 : other.map.entrySet()) {
                     res.add(
                             e1.getKey().multiplyIm(e2.getKey()),
-                            e1.getValue() * e2.getValue() * factor
+                            val * e2.getValue()
                     );
                 }
             }
@@ -305,6 +299,10 @@ public interface SymbolMath {
                               .filter(e -> zero(e.getValue()))
                               .map(Map.Entry::getKey).toList();
             toRemove.forEach(map::remove);
+        }
+
+        public MVPolynomial substituteTermsIm() {
+            return substituteTermsIm(SubstituteRules.get());
         }
 
         public MVPolynomial substituteTermsIm(String fromTerm, String toExpression) {
@@ -422,6 +420,66 @@ public interface SymbolMath {
         }
     }
 
+    class MVPolynomialParser {
+        static final Pattern OP_VAL_PATTERN = Pattern.compile("([ *+−-]*)([(]|[)]|[a-zA-Z0-9.]+)");
+        private final Matcher matcher;
+        private String op, val;
+
+        public MVPolynomialParser(String expr) {
+            matcher = OP_VAL_PATTERN.matcher(expr);
+        }
+
+        private boolean step() {
+            if (matcher.find()) {
+                op = matcher.group(1).replace(" ","")
+                            .replace("−", "-");// "+" or "-" or ""
+                val = matcher.group(2); // "(" or ")" or alphaNumValue
+                return !")".equals(val);
+            }
+            return false;
+        }
+
+        public MVPolynomial parse() {
+            var acc = new Accumulator();
+            while (step()) {
+                acc.applyOp(op, "(".equals(val)
+                        ? parse() : MVPolynomial.parseNumVal(val, 1)
+                );
+            }
+            return acc.result();
+        }
+
+        static class Accumulator {
+            final MVPolynomial sum = new MVPolynomial();
+            MVPolynomial prod = new MVPolynomial();
+            int pos;
+
+            public void applyOp(String op, MVPolynomial poly) {
+                if (poly == null) return;
+                if (op.isEmpty()) {
+                    op = pos == 0 ? "+" : "*";
+                }
+                ++pos;
+                switch (op) {
+                    case "*-" -> prod = poly.multiplyIm(prod, -1);
+                    case "*" -> prod = poly.multiplyIm(prod);
+                    case "+", "--" -> {
+                        sum.add(prod);
+                        prod = poly;
+                    }
+                    case "-" -> {
+                        sum.add(prod);
+                        prod = poly.negateIm();
+                    }
+                }
+            }
+
+            public MVPolynomial result() {
+                return sum.add(prod);
+            }
+        }
+    }
+
     record SubstituteTerm(Term fromTerm, MVPolynomial toExpression) {
         public static SubstituteTerm parse(String fromTerm, String toExpression) {
             return new SubstituteTerm(new Term(fromTerm), MVPolynomial.parse(toExpression));
@@ -437,6 +495,7 @@ public interface SymbolMath {
         public final List<SubstituteTerm> list = new ArrayList<>();
         public boolean all;
 
+        @SuppressWarnings("unused")
         public SubstituteTerms acceptAll(boolean all) {
             this.all = all;
             return this;
@@ -610,7 +669,7 @@ public interface SymbolMath {
         }
 
         public Matrix multiplyIm(double scalar) {
-            return multiplyIm(scalar, null);
+            return multiplyIm(scalar, (Term) null);
         }
 
         /**
@@ -628,19 +687,23 @@ public interface SymbolMath {
         }
 
         public Matrix multiplyIm(String expression) {
-            return multiplyIm(MVPolynomial.parse(expression));
+            return multiplyIm(1, MVPolynomial.parse(expression));
         }
 
-        public Matrix multiplyIm(MVPolynomial expression) {
+        public Matrix multiplyIm(double scalar, MVPolynomial expression) {
             var out = new Matrix(nRows, nCols);
             if (expression == null || expression.isZero()) return out;
             iterateNonNull((pos, row, col, cell) ->
-                    out.cells[pos] = cell.multiplyIm(expression));
+                    out.cells[pos] = cell.multiplyIm(expression, scalar));
             out.logOp(id + ".multiply(expr '" + expression + "')");
             return out;
         }
 
         public Matrix multiplyIm(Matrix right) {
+            return multiplyIm(1, right);
+        }
+
+        public Matrix multiplyIm(double factor, Matrix right) {
             if (nCols != right.nRows) {
                 throw new IllegalArgumentException("multiply: nCols != other.nRows");
             }
@@ -653,7 +716,7 @@ public interface SymbolMath {
                     var l = cells[leftPos++];
                     var r = right.cells[rightPos];
                     if (l != null && r != null) { //null <=> 0
-                        elem.add(l.multiplyIm(r));
+                        elem.add(l.multiplyIm(r, factor));
                     }
                     rightPos += out.nCols;
                 }
