@@ -113,27 +113,10 @@ public interface SymbolMath {
      */
     class MVPolynomial {
         private final Map<Term, Double> map = new TreeMap<>();
-        static final Pattern SCALAR_TERM_PATTERN = Pattern.compile("([^a-zA-Z_]*)(.*)");
         String label;
 
         public static MVPolynomial parse(String expression) {
             return new MVPolynomialParser(expression).parse();
-        }
-
-        private static void parseNumVal(String part, MVPolynomial sumOfTerms, double sign) {
-            Matcher matcher = SCALAR_TERM_PATTERN.matcher(part);
-            if (!matcher.matches()) {
-                return;
-            }
-            String num = matcher.group(1).trim();
-            double scalar = !num.isEmpty() ? Double.parseDouble(num) : 1;
-            sumOfTerms.add(new Term(matcher.group(2).trim()), sign * scalar);
-        }
-
-        public static MVPolynomial parseNumVal(String part, double sign) {
-            MVPolynomial sumOfTerms = new MVPolynomial();
-            parseNumVal(part, sumOfTerms, sign);
-            return sumOfTerms;
         }
 
         public double scalarSum() {
@@ -422,6 +405,7 @@ public interface SymbolMath {
 
     class MVPolynomialParser {
         static final Pattern OP_VAL_PATTERN = Pattern.compile("([ *+−-]*)([(]|[)]|[a-zA-Z0-9.]+)");
+        static final Pattern SCALAR_TERM_PATTERN = Pattern.compile("([^a-zA-Z_]*)(.*)");
         private final Matcher matcher;
         private String op, val;
 
@@ -429,9 +413,20 @@ public interface SymbolMath {
             matcher = OP_VAL_PATTERN.matcher(expr == null ? "" : expr);
         }
 
+        static MVPolynomial parseNumVal(String part) {
+            var sumOfTerms = new MVPolynomial();
+            Matcher matcher = SCALAR_TERM_PATTERN.matcher(part);
+            if (matcher.matches()) {
+                String num = matcher.group(1).trim();
+                double scalar = !num.isEmpty() ? Double.parseDouble(num) : 1;
+                sumOfTerms.add(new Term(matcher.group(2).trim()), 1 * scalar);
+            }
+            return sumOfTerms;
+        }
+
         private boolean step() {
             if (matcher.find()) {
-                op = matcher.group(1).replace(" ","")
+                op = matcher.group(1).replace(" ", "")
                             .replace("−", "-");// "+" or "-" or ""
                 val = matcher.group(2); // "(" or ")" or alphaNumValue
                 return !")".equals(val);
@@ -442,9 +437,7 @@ public interface SymbolMath {
         public MVPolynomial parse() {
             var acc = new Accumulator();
             while (step()) {
-                acc.applyOp(op, "(".equals(val)
-                        ? parse() : MVPolynomial.parseNumVal(val, 1)
-                );
+                acc.applyOp(op, "(".equals(val) ? parse() : parseNumVal(val));
             }
             return acc.result();
         }
