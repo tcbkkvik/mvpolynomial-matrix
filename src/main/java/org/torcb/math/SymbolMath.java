@@ -404,7 +404,7 @@ public interface SymbolMath {
     }
 
     class MVPolynomialParser {
-        static final Pattern OP_VAL_PATTERN = Pattern.compile("([ *+−-]*)([(]|[)]|[a-zA-Z0-9.]+)");
+        static final Pattern OP_VAL_PATTERN = Pattern.compile("([ *+−-]*)([(]|[)]|[a-zA-Z_0-9.]+)");
         static final Pattern SCALAR_TERM_PATTERN = Pattern.compile("([^a-zA-Z_]*)(.*)");
         private final Matcher matcher;
         private String op, val;
