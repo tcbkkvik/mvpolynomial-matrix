@@ -149,11 +149,11 @@ public interface SymbolMath {
         }
 
         public MVPolynomial add(String expr) {
-            return add(MVPolynomial.parse(expr));
+            return add(parse(expr));
         }
 
         public MVPolynomial add(double scalar, String expr) {
-            return add(MVPolynomial.parse(expr), scalar);
+            return add(parse(expr), scalar);
         }
 
         public MVPolynomial add(MVPolynomial st) {
@@ -212,7 +212,7 @@ public interface SymbolMath {
         }
 
         public MVPolynomial multiplyIm(String expr) {
-            return multiplyIm(MVPolynomial.parse(expr), 1);
+            return multiplyIm(parse(expr), 1);
         }
 
         /**
@@ -289,7 +289,7 @@ public interface SymbolMath {
         }
 
         public MVPolynomial substituteTermsIm(String fromTerm, String toExpression) {
-            return substituteTermsIm(new Term(fromTerm), MVPolynomial.parse(toExpression));
+            return substituteTermsIm(new Term(fromTerm), parse(toExpression));
         }
 
         public MVPolynomial substituteTermsIm(SubstituteTerms subst) {
@@ -404,10 +404,9 @@ public interface SymbolMath {
     }
 
     class MVPolynomialParser {
-        static final Pattern OP_VAL_PATTERN = Pattern.compile("([ *+−-]*)([(]|[)]|[a-zA-Z_0-9.]+)");
+        static final Pattern OP_VAL_PATTERN = Pattern.compile("([ *+−-]*)([()]|[a-zA-Z_0-9.]+)");
         static final Pattern SCALAR_TERM_PATTERN = Pattern.compile("([^a-zA-Z_]*)(.*)");
         private final Matcher matcher;
-        private String op, val;
 
         public MVPolynomialParser(String expr) {
             matcher = OP_VAL_PATTERN.matcher(expr == null ? "" : expr);
@@ -424,31 +423,18 @@ public interface SymbolMath {
             return sumOfTerms;
         }
 
-        private boolean step() {
-            if (matcher.find()) {
-                op = matcher.group(1).replace(" ", "")
-                            .replace("−", "-");// "+" or "-" or ""
-                val = matcher.group(2); // "(" or ")" or alphaNumValue
-                return !")".equals(val);
-            }
-            return false;
-        }
-
         public MVPolynomial parse() {
-            var acc = new Accumulator();
-            while (step()) {
-                acc.applyOp(op, "(".equals(val) ? parse() : parseNumVal(val));
-            }
-            return acc.result();
-        }
-
-        static class Accumulator {
-            final MVPolynomial sum = new MVPolynomial();
-            MVPolynomial prod = new MVPolynomial();
-            int pos;
-
-            public void applyOp(String op, MVPolynomial poly) {
-                if (poly == null) return;
+            final var sum = new MVPolynomial();
+            var prod = new MVPolynomial();
+            int pos = 0;
+            while(matcher.find()) {
+                var op = matcher.group(1).replace(" ", "")
+                            .replace("−", "-");// "+" or "-" or ""
+                var val = matcher.group(2); // "(" or ")" or alphaNumValue
+                if (")".equals(val)) {
+                    return sum.add(prod);
+                }
+                var poly = "(".equals(val) ? parse() : parseNumVal(val);
                 if (op.isEmpty()) {
                     op = pos == 0 ? "+" : "*";
                 }
@@ -466,10 +452,7 @@ public interface SymbolMath {
                     }
                 }
             }
-
-            public MVPolynomial result() {
-                return sum.add(prod);
-            }
+            return sum.add(prod);
         }
     }
 

@@ -117,6 +117,6 @@ public class SymbolMathTest {
 
         System.out.println(poly);
         var expect = MVPolynomial.parse("2 a*a  -1");
-        assertEquals(poly, expect);
+        assertEquals(expect, poly);
     }
 }

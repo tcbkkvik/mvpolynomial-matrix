@@ -116,11 +116,6 @@ public interface MatrixUtil {
         }
     }
 
-    @SuppressWarnings("unused")
-    static Quaternion fromAxis(String i, String j, String k) {
-        return Quaternion.fromSymbols("cos", i + " sin", j + " sin", k + " sin");
-    }
-
     record Quaternion(MVPolynomial c, MVPolynomial i, MVPolynomial j, MVPolynomial k) {
         public static Quaternion fromSymbols(String c, String i, String j, String k) {
             return new Quaternion(
