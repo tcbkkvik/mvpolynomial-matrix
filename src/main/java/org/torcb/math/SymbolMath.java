@@ -404,8 +404,8 @@ public interface SymbolMath {
     }
 
     class MVPolynomialParser {
-        static final Pattern OP_VAL_PATTERN = Pattern.compile("([ *+−-]*)([()]|[a-zA-Z_0-9.]+)");
-        static final Pattern SCALAR_TERM_PATTERN = Pattern.compile("([^a-zA-Z_]*)(.*)");
+        static final Pattern OP_VAL_PATTERN = Pattern.compile("([ *+−-]*)([()]|[\\w.]+)");
+        static final Pattern SCALAR_TERM_PATTERN = Pattern.compile("([\\d.]*)(\\w*)");
         private final Matcher matcher;
 
         public MVPolynomialParser(String expr) {
@@ -427,18 +427,13 @@ public interface SymbolMath {
             final var sum = new MVPolynomial();
             var prod = new MVPolynomial();
             int pos = 0;
-            while(matcher.find()) {
-                var op = matcher.group(1).replace(" ", "")
-                            .replace("−", "-");// "+" or "-" or ""
-                var val = matcher.group(2); // "(" or ")" or alphaNumValue
+            while (matcher.find()) {
+                var val = matcher.group(2);
                 if (")".equals(val)) {
-                    return sum.add(prod);
+                    break;
                 }
+                var op = getOp(matcher.group(1), pos++);
                 var poly = "(".equals(val) ? parse() : parseNumVal(val);
-                if (op.isEmpty()) {
-                    op = pos == 0 ? "+" : "*";
-                }
-                ++pos;
                 switch (op) {
                     case "*-" -> prod = poly.multiplyIm(prod, -1);
                     case "*" -> prod = poly.multiplyIm(prod);
@@ -453,6 +448,12 @@ public interface SymbolMath {
                 }
             }
             return sum.add(prod);
+        }
+
+        private static String getOp(String _op, int pos) {
+            var op = _op.replace(" ", "")
+                        .replace("−", "-");
+            return op.isEmpty() ? (pos == 0 ? "+" : "*") : op;
         }
     }
 
