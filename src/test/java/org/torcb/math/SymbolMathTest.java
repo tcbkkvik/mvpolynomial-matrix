@@ -83,6 +83,7 @@ public class SymbolMathTest {
                 .add("j j", "1 - i i - k k")
                 .add("cos cos", "1 - sin sin"));
 
+        Matrix identity3d = Matrix.identity(3);
         var L = Matrix.init3x3(
                 "0", "-k", "j",
                 "k", "0", "-i",
@@ -90,7 +91,7 @@ public class SymbolMathTest {
         var L_sin = L.multiplyIm("sin").label("L*sin");
         var LL = L.multiplyIm(L).label("L*L");
         var LL_1_cos = LL.multiplyIm("1 - cos").label("LL*(1-cos)");// 1 - cos;
-        Matrix rotateM = Identity3d().addIm(L_sin).addIm(LL_1_cos)
+        Matrix rotateM = identity3d.addIm(L_sin).addIm(LL_1_cos)
                                    .label("Rotate = I + L*sin + L*L*(1-cos)  //Euler-Rodrigues formula");
         Matrix idRot = rotateM.multiplyIm(rotateM.transposeIm()).label("I = Rotate * transpose(Rotate)");
 
@@ -100,16 +101,22 @@ public class SymbolMathTest {
 
         System.out.printf("\n Matrix %s determinant: %s\n", rotateM.id, det);
         assertEquals(rotateM, mat2);
-        assertEquals(Identity3d(), idRot);
+        assertEquals(identity3d, idRot);
         assertEquals(new MVPolynomial().add(1), det);
     }
 
     @Test
     void testParseFull() throws NumberFormatException {
+        try {
+            MVPolynomial.parse("sld (( [&& sdf fj032 j-as");
+        } catch (Exception ex) {
+            //noinspection ThrowablePrintedToSystemOut
+            System.out.println(ex);
+        }
         SubstituteRules.set(new SubstituteTerms()
                 .add("cos cos", "1 - sin sin"));
 
-        var res = MVPolynomial.parse("6a - -4 * -a");
+        MVPolynomial res = MVPolynomial.parse("6a - -4 * -a");
         assertEquals(MVPolynomial.parse("2a"), res);
         MVPolynomial poly = MVPolynomial
                 .parse("1 + (a + cos)(a - cos) + (a+1)(a-1) - sin sin")

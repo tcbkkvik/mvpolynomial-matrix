@@ -13,13 +13,13 @@ import java.util.stream.Collectors;
 public interface SymbolMath {
     DecimalFormat DF = new DecimalFormat("#.###", decSep());
     ThreadLocal<SubstituteTerms> SubstituteRules = ThreadLocal.withInitial(SubstituteTerms::new);
-    static Matrix Identity3d() {return Matrix.identity(3);}
 
-    static DecimalFormatSymbols decSep() {
+    private static DecimalFormatSymbols decSep() {
         var ds = DecimalFormatSymbols.getInstance();
         ds.setDecimalSeparator('.');
         return ds;
     }
+
     static boolean zero(double d) {
         return Math.abs(d) < 1e-10;
     }
@@ -404,11 +404,15 @@ public interface SymbolMath {
     }
 
     class MVPolynomialParser {
-        static final Pattern OP_VAL_PATTERN = Pattern.compile("([ *+−-]*)([()]|[\\w.]+)");
+        static final Pattern OP_VAL_PATTERN = Pattern.compile("([\\s*+−-]*)([()]|[\\w.]+)");
         static final Pattern SCALAR_TERM_PATTERN = Pattern.compile("([\\d.]*)(\\w*)");
+        static final Pattern SPC_PATTERN = Pattern.compile("\\s");
         private final Matcher matcher;
+        private final String expression;
+        private int index;
 
         public MVPolynomialParser(String expr) {
+            expression = expr;
             matcher = OP_VAL_PATTERN.matcher(expr == null ? "" : expr);
         }
 
@@ -418,7 +422,7 @@ public interface SymbolMath {
             if (matcher.matches()) {
                 String num = matcher.group(1).trim();
                 double scalar = !num.isEmpty() ? Double.parseDouble(num) : 1;
-                sumOfTerms.add(new Term(matcher.group(2).trim()), 1 * scalar);
+                sumOfTerms.add(new Term(matcher.group(2).trim()), scalar);
             }
             return sumOfTerms;
         }
@@ -428,6 +432,7 @@ public interface SymbolMath {
             var prod = new MVPolynomial();
             int pos = 0;
             while (matcher.find()) {
+                validate();
                 var val = matcher.group(2);
                 if (")".equals(val)) {
                     break;
@@ -450,10 +455,24 @@ public interface SymbolMath {
             return sum.add(prod);
         }
 
+        private void validate() {
+            int start = matcher.start();
+            if (start > index) {
+                throw new IllegalArgumentException(
+                        "Unexpected chars at index=" + index + ": '" + expression.substring(index, start) + "'");
+            }
+            index = matcher.end();
+        }
+
         private static String getOp(String _op, int pos) {
-            var op = _op.replace(" ", "")
-                        .replace("−", "-");
+            var op = SPC_PATTERN.matcher(_op).replaceAll("")
+                                .replace("−", "-");
             return op.isEmpty() ? (pos == 0 ? "+" : "*") : op;
+        }
+
+        @Override
+        public String toString() {
+            return new StringBuilder(expression).insert(index, " | ").toString();
         }
     }
 
@@ -908,7 +927,7 @@ public interface SymbolMath {
         }
     }
 
-    static boolean isEmpty(String s) {
+    private static boolean isEmpty(String s) {
         return s == null || s.isEmpty();
     }
 
